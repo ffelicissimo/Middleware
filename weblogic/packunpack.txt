@@ -1,0 +1,4 @@
+#Generate Pack
+./pack.sh -managed=true -domain=/app/Oracle/Middleware/user_projects/domains/appprod_domain/ -template=appprodtemplate.jar -template_name=appprod_domain_template
+#Unpack
+./unpack.sh -domain=/app/Oracle/Middleware/user_projects/domains/appprod_domain/ -template=appprodtemplate.jar
