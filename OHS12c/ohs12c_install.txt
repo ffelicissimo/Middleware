@@ -1,0 +1,224 @@
+Procedimento para instalação e configuração do Oracle Http Server
+
+
+Sumário
+1.	Objetivo do documento.................................................................................................3
+2.	Pré-requisito..................................................................................................................3
+3.	Roteiro para instalação..................................................................................................3
+4.	Procedimento instalação Jrockit....................................................................................4
+5.	Procedimento de instalação Oracle Http Server...........................................................4 
+6.	Procedimento para configuração do Oracle Http Server.............................................11
+7.	Tuning..........................................................................................................................14
+8.	Operação......................................................................................................................16
+
+
+1.	Objetivo do documento
+1)	Esse documento tem como objetivo realizar a instalação e configuração do Oracle Http Server versão 12C
+
+2.	Roteiro para instalação
+
+1)	Transferir os arquivos listados para o diretório /opt/ohs/binários.
+•	jdk1.8.0_141.tar.gz (Sempre instalar a última versão compatível com Oracle Http Server 11G)
+•	fmw_12.2.1.3.0_ohs_linux64_Disk1_1of1.zip
+
+2)	Exportar o Display para desktop
+3)	Executar os procedimentos com usuário utilizado
+
+
+3.	Procedimento de instalação Jrockit
+
+1)	Copiar o arquivo jdk1.8.0_141.tar.gz para /opt/ohs/binários/
+2)	Descompactar o arquivo no JAVA_HOME com o comando tar -vzxf jdk1.8.0_141.tar.gz -C /JAVA_HOME 
+ 
+
+4.	Procedimento de instalação Oracle Http Server
+1)	Entrar no diretório /opt/web/binários e executar os comandos 
+unzip fmw_12.2.1.3.0_ohs_linux64_Disk1_1of1.zip
+Após isso rodar o comando ./fmw_12.2.1.3.0_ohs_linux64.bin
+2)	 Após o comando acima será realizado o start da Interface Gráfica para instalação do Oracle Http Server.
+3)	Na primeira tela de apresentação do produto apenas clique em Next
+ 
+
+Clique em “skip auto Updates” (Caso tenha patches para serem aplicados é recomendado realizar o download e informar o diretório na opção “Select patches from directory” (Não conectamos automaticamente no MOS para realizar o Update de patchs)
+ 
+
+Na próxima tela informar o Oracle Home caso ele não exista (/opt/web/<nome e versão do produto>)
+ 
+
+Na próxima tela selecione “Standalone HTTP Server” e clique em Next
+ 
+
+
+Na tela abaixo informe o HomeDir do JDK instalado no ambiente
+  
+
+Na tela abaixo são verificados os pré-requisitos para instalação, caso não ocorra erros clique em “Next”
+ 
+Valide as informações e clique em Install
+ 
+
+ Na tela abaixo clique em “Next” caso todos os passos sejam executados com sucesso
+ 
+
+E finalmente clique em “Finish” para finalizar a instalação.
+ 
+
+5.	Procedimento de configuração do Oracle Http Server
+1)	Executar o comando abaixo para realizar o start do wizard para configuração do /opt/web/webtier12.2.1.3.0/Oracle_WT12c/ohs/common/bin/config.sh
+Na tela que irá abrir selecione “Create a new domain”  e informe o local de instalação do novo dominio por padrão utilizamos “/opt/web/domains/<nome do dominio>
+ 
+Selecione os 2 templates disponiveis para Stadalone Domain e Oracle Http Server
+ 
+Informe o caminho da JDK que está configurada no ambiente (Por padrão vamos deixar a JDk instalada nos passos anteriores)
+ 
+
+Na próxima tela informe o nome do componente e o tipo, para seguir o padrão o nome do componente será ohs1 e o tipo, deixem os outros valores default e clique em Next.
+ 
+
+Informe as configurações abaixo
+System Component: ohs1
+Admin Host: <Hostname do servidor que está sendo instalado a instancia do OHS>
+Admin Port: Porta Administrativa <default 9999>
+Listen Address: <Hostname do servidor que está sendo instalado a instancia do OHS>
+Listen Port: <Porta que o OHS irá escutar> (Deixar default)
+SSL Listen Port: <Porta segura que o OHS vai escutar>
+Server Name: <Deixar default>
+ 
+
+Na tela abaixo defina o home do Node Manager, por padrão iremos configurar dentro da estrutura do domínio, posteriormente configure usuário e senha do Node Manager com as informações abaixo.
+Username:  usuario
+Password: password
+
+ 
+
+
+Valide as informações e clique em Create
+ 
+
+Clique em Next após a criação 
+ 
+
+
+Finalmente verifique o caminho da instalação e clique em “Finish”
+
+
+Tuning
+1)	Realizar a configuração conforme informação abaixo
+No arquivo httpd.conf localizado dentro do diretório /opt/web/domains/nome_domain/config/fmwconfig/components/OHS/instances/ohs1  incluir as configurações abaixo:
+###################Tuning das transações#################
+MaxKeepAliveRequests 1000
+KeepAliveTimeout 15
+
+IfModule mpm_worker_module>
+ThreadLimit            64
+StartServers           20
+ServerLimit            80
+MaxClients           5120
+MinSpareThreads       800
+MaxSpareThreads      1400
+ThreadsPerChild        64
+MaxRequestsPerChild 10000
+AcceptMutex fcntl
+LockFile "${ORACLE_INSTANCE}/diagnostics/logs/${COMPONENT_TYPE}/${COMPONENT_NAME}/http_lock"
+</IfModule>
+
+#####Porta LISTEN######
+Listen 80
+
+#####Usuario e grupo#####
+User apache
+Group apache
+
+######Hostname do servidor com domínio######
+ServerName <Hostname>.dominio.com
+
+#LOG Customizado#
+LogFormat "%h %l %u %t \"%r\" %>s %b %D \"%{Referer}i\"" combined
+LogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b %D \"%{Referer}i\"" combined-forwarded
+LogFormat "%h %l %u %t \"%r\" %>s %b" common	
+
+#Padronização do Path de logs OHS
+OraLogDir "/opt/web/logs/ohs/"
+OraLogMode apache
+OraLogSeverity WARNING:32
+OraLogRotationParams S 10:70
+
+####Rodar o comando abaixo com o OHS down:
+cd /opt/web/domains/nome_domain/servers/ohs1/
+rm -rf logs
+ln -s /opt/web/logs/ohs/ logs 
+
+# Include para os Virtuais Hosts(Weblogic)
+include "${ORACLE_INSTANCE}/config/${COMPONENT_TYPE}/${COMPONENT_NAME}/inc/httpd-<nome vip>.conf”
+
+#####Configurações Gerais#######
+Criar o diretório inc dentro do caminho /opt/web/domains/nome_domain/config/fmwconfig/components/OHS/instances/ohs1/ para inclusão dos arquivos de configuração dos virtuais hosts.
+Criar o diretório /opt/web/logs/ohs/.
+No arquivo mod_wl_ohs.conf localizado dentro do diretório /opt/web/domains/OHS_CORP/config/fmwconfig/components/OHS/instances/ohs1 incluir as configurações abaixo:
+<IfModule weblogic_module>
+   Debug ERR
+   DynamicServerList ON
+   Idempotent OFF
+   FileCaching ON
+   MaxSkipTime 120
+   KeepAliveEnabled ON
+   KeepAliveSecs 15
+   WLSocketTimeoutSecs 5
+   WLIOTimeoutSecs 600
+   ConnectTimeoutSecs 10
+   ConnectRetrySecs 1
+   WLTempDir /opt/web/logs/ohs/tmp
+   WLLogFile /opt/web/logs/ohs/plugin.log
+</IfModule>
+
+
+####Configuração de cada VirtualHost#####
+
+##Porta do Virtual host##
+<VirtualHost *:80>
+
+###Server Name####
+    ServerName   Ex: alsb3-soa
+    ErrorLog "|${ORACLE_HOME}/ohs/bin/odl_rotatelogs /opt/web/logs/ohs/<nome do vip> -error_log_brtlvlts0363pl-%Y-%m-%d-%H_%M_%S 10M 500M"
+    CustomLog "|${ORACLE_HOME}/ohs/bin/odl_rotatelogs /opt/web/logs/ohs/<nome do vip>-access_log_brtlvlts0363pl-%Y-%m-%d-%H_%M_%S 60M 500M" combined-forwarded
+
+    <Location />
+         SetHandler weblogic-handler
+         DynamicServerList OFF
+         DebugConfigInfo ON
+         WebLogicCluster Servidor:porta,Servidor:porta (Incluir todos servidores com as portas das JVM’s separados por “,”)
+         ConnectTimeoutSecs 60
+         ConnectRetrySecs 1
+         MaxSkipTime 180
+    </Location>
+
+</VirtualHost>
+
+
+
+Para permitir que o Oracle HTTP Server escute em uma porta reservada (por exemplo, a porta padrão 80 ou a porta 443), aplique as configurações abaixo em cada máquina Oracle HTTP Server
+
+ chown root  /opt/web/webtier12.2.1.3.0/Oracle_WT12c/ohs/bin/launch 
+chmod 4750  /opt/web/webtier12.2.1.3.0/Oracle_WT12c/ohs/bin/launch
+
+Agora as configurações que exigem permissão de root estão finalizadas
+
+6.	Operação
+1)	Configuração para não pedir a senha do Node manager
+Na primeira vez que for executar o comando de start do OHS fazer conforme orientação abaixo.
+/opt/web/domains/nome_domain/bin/startComponent.sh ohs1 storeUserConfig
+Com isso ele irá exibir a mensagem abaixo e não irá mais solicitar a senha do Node Manager durante os procedimentos de start/stop do OHS.
+ 
+
+2)	Comandos para verificar status, iniciar e parar o Oracle Http Server
+               Obs: Antes de subir o ohs é necessário fazer o start no Node Manager.
+
+Stop/Start Node Manager
+/opt/web/domains/ OHS_CORP /bin/startNodeManager.sh
+/opt/web/domains/ OHS_CORP /bin/startNodeManager.sh
+
+Stop/Start do OHS
+/opt/web/domains/OHS_CORP/bin/startComponent.sh ohs1 /opt/web/domains/OHS_CORP/bin/stopComponent.sh ohs1
+
+3)	Diretório de Logs 
+/opt/web/domains/OHS_CORP/servers/ohs1/logs
