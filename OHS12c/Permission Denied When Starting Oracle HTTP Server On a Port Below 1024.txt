@@ -1,0 +1,23 @@
+##### Permission Denied When Starting Oracle HTTP Server On a Port Below 1024
+
+Starting Oracle HTTP Server Instances on a Privileged Port (UNIX Only)
+WARNING:
+
+When this procedure is completed, any Oracle HTTP Server processes running from this Oracle Home will be able to bind to privileged ports.
+
+On a UNIX system, TCP ports in a reserved range (typically less than 1024) can only be bound by processes with root privilege. Oracle HTTP Server always runs as a non-root user; that is, the user who installed Oracle Fusion Middleware. On UNIX, special configuration is required to allow Oracle HTTP Server to bind to privileged ports.
+
+To enable Oracle HTTP Server to listen on a port in the reserved range (for example, the default port 80 or port 443) use the following one-time setup on each Oracle HTTP Server machine:
+
+Update the ORACLE_HOME/ohs/bin/launch file by performing the following steps as the super user (if you do not have access to super user privileges, have your system administrator perform these steps):
+
+Change ownership of the file to root:
+
+chown root $ORACLE_HOME/ohs/bin/launch
+Change the permissions on the file as follows:
+
+chmod 4750 $ORACLE_HOME/ohs/bin/launch
+ 
+The steps that require root permissions are now complete.
+
+Modify the port settings for Oracle HTTP Server as described in Managing Ports.
